@@ -1,1 +1,1 @@
-// Write your package code here.
+module.exports = require('./core/pure.js');
