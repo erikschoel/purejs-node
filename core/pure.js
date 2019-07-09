@@ -4,9 +4,10 @@ var classes = require('../classes');
 var utils = require('../utils');
 
 var pure = {
-  klass(name) {
+  klass: function klass(name) {
     return classes[name];
   },
+
   unit: utils.unit,
   pure: utils.pure,
   curry: utils.curry,
