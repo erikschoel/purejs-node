@@ -1,13 +1,11 @@
 'use strict';
 
-function compose(f) {
-  return function(g) {
-    return function(a) {
-      return g(f(a));
-    }
+function $const(a) {
+  return function() {
+    return a;
   }
 }
 
-module.exports = compose;
+module.exports = $const;
 
-module.exports.default = compose;
+module.exports.default = $const;
