@@ -3,7 +3,7 @@
 function maybe(m) {
   return function (l) {
     return function (r) {
-        return m(l)(r);
+      return m(l)(r);
     };
   };
 }

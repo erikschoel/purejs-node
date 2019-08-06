@@ -3,7 +3,7 @@
 function left(x) {
   return function (l) {
     return function (r) {
-        return l(x);
+      return l(x);
     };
   };
 }

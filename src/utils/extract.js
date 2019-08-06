@@ -1,13 +1,11 @@
 'use strict';
 
-function compose(f) {
-  return function(g) {
-    return function(a) {
-      return g(f(a));
-    }
+function extract(v) {
+  return function $_pure(k) {
+    return k(v);
   }
 }
 
-module.exports = compose;
+module.exports = extract;
 
-module.exports.default = compose;
+module.exports.default = extract;
