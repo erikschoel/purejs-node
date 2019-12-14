@@ -5,8 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "build": "babel --presets env src -d ./ --ignore src/index.test.js",
-    "dev": "babel --presets env src -d ./ --watch --ignore src/index.test.js",
-    "test": "jest --watch"
+    "dev": "babel --presets env src -d ./ --watch --ignore src/index.test.js"
   },
   "repository": {
     "type": "git",
@@ -27,7 +26,6 @@
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
-    "babel-preset-env": "^1.7.0",
-    "jest": "^20.0.3"
+    "babel-preset-env": "^1.7.0"
   }
 }
