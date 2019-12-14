@@ -2,6 +2,8 @@
 
 var Functor = require('./functor');
 var utils = require('../utils');
+var dispatcher = require('../core/dispatcher');
+var async = require('../core/async');
 
 function cast(v, p) {
   if (v && v instanceof Cont && v.cont) {
@@ -46,10 +48,14 @@ var Cont = utils.inherit(function Cont(x, f) {
     return this.of(this._x, $cast(this.$pure(this.$map(f))));
   },
   bind(f) {
-    return this.of(this.$cont(), $cast(f));
+    return this.of(this.$cont(), this.then($cast(f)));
   },
+  lazy: async.lazy,
+  then: utils.andThen(dispatcher.lazy),
+  next: dispatcher.nextTick.next,
   chain(k) {
-    return utils.cont(this._x, this._f)(k);
+    // return utils.cont(this._x, this._f)(k);
+    return dispatcher.enqueue(this.next(this.$cont())(k || utils.unit));
   },
   run(k) {
     return this.chain(k);
