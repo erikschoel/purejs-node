@@ -1,5 +1,6 @@
 'use strict';
 
+var andThen = require('./andThen');
 var compose = require('./compose');
 var inherit = require('./inherit');
 var mixin = require('./mixin');
@@ -8,13 +9,14 @@ var curry = require('./curry');
 var pure = require('./pure');
 var fold = require('./fold');
 var $const = require('./const');
+var cont = require('./cont');
 var right = require('./right');
 var left = require('./left');
 
 module.exports = {
-  compose, inherit, mixin, unit, curry, pure, fold, $const, right, left
+  andThen, compose, inherit, mixin, unit, curry, pure, fold, $const, cont, right, left
 };
 
 module.exports.default = {
-  compose, inherit, mixin, unit, curry, pure, fold, $const, right, left
+  andThen, compose, inherit, mixin, unit, curry, pure, fold, $const, cont, right, left
 };
