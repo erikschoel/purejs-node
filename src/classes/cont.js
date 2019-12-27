@@ -54,7 +54,6 @@ var Cont = utils.inherit(function Cont(x, f) {
   then: utils.andThen(dispatcher.lazy),
   next: dispatcher.nextTick.next,
   chain(k) {
-    // return utils.cont(this._x, this._f)(k);
     return dispatcher.enqueue(this.next(this.$cont())(k || utils.unit));
   },
   run(k) {

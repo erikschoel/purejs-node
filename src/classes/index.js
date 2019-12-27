@@ -4,11 +4,12 @@ var Functor = require('./functor');
 var Ap = require('./ap');
 var Cont = require('./cont');
 var Coyoneda = require('./coyoneda');
+var Free = require('./free');
 var List = require('./list');
 var IO = require('./io');
 
 var classes = {
-  Functor, Ap, Cont, Coyoneda, List, IO
+  Functor, Ap, Cont, Coyoneda, Free, List, IO
 }
 
 module.exports = classes;
