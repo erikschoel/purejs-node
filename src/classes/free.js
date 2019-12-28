@@ -1,43 +1,53 @@
 'use strict';
 
-var Functor = require('./functor');
-var Cont = require('./cont');
-var utils = require('../utils');
-var threads = require('../core/threads');
-
-function kont(free) {
-  return function $_pure(k) {
-    free.map(k).run();
-  }
-};
-
-function of(x) {
-  return new this(threads.makeThread(x));
-}
-
-var Free = utils.inherit(function Free(x) {
-  this._x = x;
-}, Functor, {
-  of(x) {
-    return new this.constructor(x);
-  },
-  map(f) {
-    return this.of(threads.mapThread(this._x, f));
-  },
-  bind(f) {
-    return this.of(threads.bindThread(this._x, threads.makeBind(f).run));
-  },
-  run() {
-    return threads.run(this._x);
-  },
-  cont() {
-    return Cont.of(kont(new this.constructor(this._x)));
-  }
-}, {
-  of: of,
-  lift: of
+module.exports = (function Free() {
+  return {
+    parent: 'Functor',
+    klass: function Free(x) {
+      this._x = x;
+    },
+    ext: {
+      of(x) {
+        return new this.constructor(x);
+      },
+      map(f) {
+        return this.of(this.$fn.mapThread(this._x, f));
+      },
+      bind(f) {
+        return this.of(this.$fn.bindThread(this._x, this.$fn.makeBind(f).run));
+      },
+      run() {
+        return this.$fn.run(this._x);
+      }
+    },
+    attrs: [
+      function of(x) {
+        return new this(this.prototype.$fn.makeThread(x));
+      },
+      function lift(x) {
+        return this.of(x);
+      }
+    ],
+    threads: require('../core/threads'),
+    kont(free) {
+      return function $_pure(k) {
+        free.map(k).run();
+      }
+    },
+    cont($cont, kont) {
+      return function() {
+        return $cont.of(kont(new this.constructor(this._x)));
+      }
+    },
+    init(type, klass, sys) {
+      klass.prop('cont', type.cont(klass.find('Cont'), type.kont));
+      klass.prop('$fn', {
+        mapThread: type.threads.mapThread,
+        bindThread: type.threads.bindThread,
+        makeBind: type.threads.makeBind,
+        makeThread: type.threads.makeThread,
+        run: type.threads.run
+      });
+    }
+  };
 });
-
-module.exports = Free;
-
-module.exports.default = Free;

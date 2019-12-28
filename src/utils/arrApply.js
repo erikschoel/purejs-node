@@ -1,7 +1,7 @@
 'use strict';
 
-function arrApply(arr) {
-  return arr.shift().apply(null, arr);
+function arrApply(arr, ctx) {
+  return arr.shift().apply(ctx || null, arr);
 }
 
 module.exports = arrApply;

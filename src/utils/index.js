@@ -12,6 +12,7 @@ var curry = require('./curry');
 var pure = require('./pure');
 var fold = require('./fold');
 var getArgs = require('./getArgs');
+var extract = require('./extract');
 var $const = require('./const');
 var cont = require('./cont');
 var counter = require('./counter');
@@ -91,7 +92,7 @@ var Empty = inherit(function Empty(v) {
 }, true);
 
 var utils = Obj.of({
-  obj: Obj.of, empty: Empty.of, andThen, arrApply, arrBind, compose, counter, inherit, keys, mixin, unit, curry, pure, fold, getArgs, $const, cont, ctor, right, left, toString, wrap, walk
+  obj: Obj.of, empty: Empty.of, andThen, arrApply, arrBind, compose, counter, inherit, keys, mixin, unit, curry, pure, fold, getArgs, extract, $const, cont, ctor, right, left, toString, wrap, walk
 });
 
 module.exports = utils;

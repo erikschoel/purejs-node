@@ -1,1 +1,1 @@
-module.exports = require('./core/pure.js');
+module.exports = require('./core');

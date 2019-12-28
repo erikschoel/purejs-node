@@ -1,51 +1,10 @@
 'use strict';
 
-(function(run) {
-  var fn = run();
-  self.now = fn.now;
-  self.nowInfo = fn;
-})(
-  (function() {
-  var perf = self.performance;
-  if (perf && (perf.now || perf.webkitNow)) {
-    var perfNow = perf.now ? 'now' : 'webkitNow';
-    return { obj: perf, fn: perf[perfNow], now: perf[perfNow].bind(perf) };
-  }else { return { obj: Date, fn: Date.now, now: Date.now }; }
-}));
-
-/* eslint-disable no-extend-native, no-extra-parens */
-Array.prototype.sort = (function(sort, create, compare) {
-  return function(x, y) {
-    if (x instanceof Function) {
-      if (y instanceof Function) {
-        return sort.call(this, create(x, y, compare));
-      } else {
-        return sort.apply(this, [].slice.call(arguments));
-      }
-    } else if (x === true || !x) {
-      return sort.call(this, compare(x));
-    } else if (typeof x === 'string') {
-      return sort.call(this, create(compare(y), function(a) {
-        return a ? a[x] : null;
-      }));
-    }
-  }
-})(Array.prototype.sort, (function(y, f, s) {
-  return function(a, b) {
-    return y(f(a), f(b), s);
-  }
-}), (function(x) {
-    return function(a, b) {
-      return (x ? -1 : 1) * (a > b ? 1 : (a < b ? -1 : 0));
-    }
-  })
-);
-
 var observable = require('../observable');
 var dispatcher = require('./dispatcher');
 var async = require('./async');
-var classes = require('../classes');
 var utils = require('../utils');
+var classes = require('../classes');
 var threads = require('./threads');
 
 var pure = utils.obj({
@@ -182,7 +141,8 @@ ns.inherit('extended', {
     var ctor = this.parseItem(item.ctor);
     // eslint-disable-next-line
     var proto = (new Function([ '\treturn {' ].concat(item.proto.split('\n').map((line, index, all) => line === '}' && index < (all.length - 1) ? '},' : line).map(line => '\t\t' + line).concat([ '\t}' ])).join('\n')))();
-    var klass = this.$pure().inherit(ctor, this.$pure().klass(item.base), proto, true);
+    // var klass = this.$pure().inherit(ctor, this.$pure().klass(item.base), proto, true);
+    var klass = this.$pure().klass(item.base).parse({ parent: item.base, klass: ctor, ext: proto });
     console.log(klass);
     return klass;
   }

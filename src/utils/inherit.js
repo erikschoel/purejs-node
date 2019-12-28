@@ -37,7 +37,7 @@ function inherit(ctor, parent, props, inst) {
   F.prototype = parent.prototype;
   var proto = new F(), keys = Object.keys(ctor.prototype);
   if (props) mixin(props, proto);
-  proto.$_parent = parent;
+  proto.$super = parent;
   if (keys.length && ctor.prototype.constructor == ctor) {
     ctor.prototype = keys.reduce(function(r, k, i, o) {
       r[k] = ctor.prototype[k];
