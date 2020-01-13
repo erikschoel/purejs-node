@@ -4,6 +4,7 @@ module.exports = (function Free() {
   return {
     parent: 'Functor',
     klass: function Free(x) {
+      this.id = this.ctor.$id = this.id();
       this._x = x;
     },
     ext: {

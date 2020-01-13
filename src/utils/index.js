@@ -4,6 +4,8 @@ var andThen = require('./andThen');
 var arrApply = require('./arrApply');
 var arrBind = require('./arrBind');
 var compose = require('./compose');
+var clone = require('./clone');
+var clone = require('./clone');
 var inherit = require('./inherit');
 var keys = require('./keys');
 var mixin = require('./mixin');
@@ -21,14 +23,19 @@ var right = require('./right');
 var left = require('./left');
 var toString = require('./toString');
 var values = require('./values');
+var tap = require('./tap');
 var wrap = require('./wrap');
 var walk = require('./walk');
+var y = require('./y');
 
 var Obj = inherit(function Obj(values) {
   if (values) this.assign(values);
 }, Object, {
   of(values) {
     return values instanceof this.constructor ? values : new this.constructor(values);
+  },
+  clone(values) {
+    return clone(this, values);
   },
   pure() {
     return pure(this);
@@ -68,14 +75,20 @@ var Obj = inherit(function Obj(values) {
       return acc[key];
     }, this) : this;
   },
+  $root(key) {
+    return key ? this.root.get.apply(this.root, [].slice.call(arguments)) : this.root;
+  },
   $set(key, value) {
     return this[key] = value;
+  },
+  $keys() {
+    return Object.keys(this);
   },
   toObservable(f) {
     return observable(this)(f);
   },
   values() {
-    return keys(this).reduce((acc, key) => {
+    return this.$keys().reduce((acc, key) => {
       const item = this.$get(key);
       acc[key] = this.is(item) ? item.values() : item;
       return acc;
@@ -91,9 +104,62 @@ var Empty = inherit(function Empty(v) {
   }
 }, true);
 
-var utils = Obj.of({
-  obj: Obj.of, empty: Empty.of, andThen, arrApply, arrBind, compose, counter, inherit, keys, mixin, unit, curry, pure, fold, getArgs, extract, $const, cont, ctor, right, left, toString, wrap, walk
-});
+var utils = Obj.of(Object.assign({
+  obj: Obj.of, empty: Empty.of, andThen, arrApply, arrBind, compose, counter, inherit, keys, values, mixin, unit, curry,
+  pure, fold, getArgs, extract, $const, cont, ctor, right, left, toString, tap, wrap, walk, y,
+  log: tap(console.log.bind(console)),
+  parseFuncs(funcs) {
+    return funcs.reduce((acc, fn) => {
+      if (fn.name.indexOf('$_') === 0) {          
+        var args = utils.getArgs(fn);
+        var func = fn.apply(null, args.map((arg) => {
+          return acc[arg.replace('$_', '')];
+        }));
+        acc[func.name] = func;
+      }else {
+        acc[fn.name] = fn;
+      }
+      return acc;
+    }, utils.obj());
+  }
+},(function() {
+    return [].slice.call(arguments).reduce((acc, fn) => {
+      acc[fn.name] = fn;
+      return acc;
+    }, {});
+  })(
+    (function call(f) {
+      return function() {
+        return f(this);
+      }
+    }),
+    (function atom(f, g) {
+      return function() {
+        return f(g(this));
+      }
+    }),
+    (function call1(f) {
+      return function(x) {
+        return f(this, x);
+      }
+    }),
+    (function call2(f) {
+      return function(x, y) {
+        return f(this, x, y);
+      }
+    }),
+    (function pass(f) {
+      return function() {
+        return f(this).apply(undefined, arguments);
+      }
+    }),
+    (function apply(f) {
+      return function() {
+        return f.apply(this, arguments);
+      }
+    })
+  )
+));
 
 module.exports = utils;
 module.exports.default = utils;

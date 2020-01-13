@@ -4,6 +4,7 @@ module.exports = (function IO() {
   return {
     parent: 'Ap',
     klass: function IO(f) {
+      this.id = this.ctor.$id = this.id();
       this.unsafePerformIO = f;
     },
     ext: {

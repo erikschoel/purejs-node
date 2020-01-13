@@ -9,6 +9,8 @@ var Store = (function() {
       this._map = this._all[2];
       this._cid = name || 'root';
 
+      this._cache = {};
+
       if (ref) this._ref = this.is(ref.parent) ? ref.parent : ref;
     },
     ext: [
@@ -318,7 +320,7 @@ var Store = (function() {
           count++;
           return info.arr();
         }, opts);
-        return recur ? bind.bind(unit, opts) : bind;
+        return recur ? bind.bind(this.unit, opts) : bind;
       }),
       (function object(k) {
         return { '$$': true, value: this.get(k), key: k, index: this.index(k), ref: this.identifier(), object: this, level: this.level() };
@@ -378,9 +380,26 @@ var Store = (function() {
     find: function() {
       return this.ctor.find.apply(this.ctor, [].slice.call(arguments));
     },
+    identifier(key) {
+      function calcOnce(node) {
+        var path = [], parent = node;
+        while ((parent = parent.parent())) {
+          path.unshift(parent._cid);
+        };
+        path.push(node._cid);
+        if (node._cache) return (node._cache.identifier = path.slice(node._offset));
+        return path.slice(node._offset);
+      };
+      return function identifier(asArray, reCalc) {
+        var path = this._cache && this._cache.identifier && !reCalc ? this._cache.identifier : calcOnce(this);
+        return asArray === true ? path : path.join(typeof asArray == 'string' ? asArray : '.');
+      };
+    },
     init: function(type, klass, sys) {
       klass.$ctor.prototype.isStore = true;
       klass.$ctor.prototype.$data = this.$data(klass);//type.make(klass));
+      klass.$ctor.prototype.unit = sys.utils.unit;
+      klass.$ctor.prototype._identifier = type.identifier('_parent');
       sys.root  = klass.$ctor.prototype.root = sys.unit(new klass.$ctor());
       sys.klass = type.find;
       var store = this.constructor.prototype.$store = sys.root.child('types');

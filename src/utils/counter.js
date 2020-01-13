@@ -1,8 +1,14 @@
 'use strict';
 
 function make(counter) {
-  return function() {
-    return counter.prefix + counter.count++;
+  return function(id) {
+    !id || (id = parseInt(id) || 0);
+    if (id >= counter.count) {
+      counter.count = id + 1;
+      return counter.prefix + id;
+    } else {
+      return counter.prefix + counter.count++;
+    }
   }
 }
 

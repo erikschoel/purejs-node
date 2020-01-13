@@ -58,17 +58,20 @@ var base     = pure.utils.arrApply(require('./ctor'), pure);
 var ctor     = new base(base);
 var db       = ctor.parse(require('./db'));
 var store    = ctor.parse(require('./store'));
-var functor  = ctor.parse(pure.classes.Functor);
-var ap       = functor.parse(pure.classes.Ap);
-var list     = ap.parse(pure.classes.List);
-var cont     = functor.parse(pure.classes.Cont);
-var coyoneda = functor.parse(pure.classes.Coyoneda);
-var free     = functor.parse(pure.classes.Free);
-var io       = functor.parse(pure.classes.IO);
+var functor  = ctor.parse(pure.classes.$Functor);
+var array    = ctor.parse(pure.classes.$Array);
+var ap       = functor.parse(pure.classes.$Ap);
+var list     = ap.parse(pure.classes.$List);
+var cont     = functor.parse(pure.classes.$Cont);
+var coyoneda = functor.parse(pure.classes.$Coyoneda);
+var free     = functor.parse(pure.classes.$Free);
+var io       = functor.parse(pure.classes.$IO);
 
 db.add();
 store.add();
 
 pure.ctor = ctor;
+ctor.prop('$pure', pure);
+ctor.parse(pure.classes.$Bind);
 
 module.exports = pure;

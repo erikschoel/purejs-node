@@ -3,6 +3,7 @@
 module.exports = (function Functor() {
   return {
     klass: function Functor(x) {
+      this.id = this.ctor.$id = this.id();
       this._x = x;
     },
     ext: {

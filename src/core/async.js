@@ -4,13 +4,12 @@ var dispatcher = require('./dispatcher');
 var utils = require('../utils');
 
 var async = utils.arrApply((function MakeAsync() {
-
   return [].slice.call(arguments);
 })(
   // === IMPORT / PARSE === //
-    (function $$ASYNC(lazy, then, frcb) {
+    (function $$ASYNC(lazy, then, frcb, arr) {
       var $proc  = dispatcher;
-      var $async = utils.obj();
+      var $async = utils.obj(arr);
       // var $cont   = this.klass('Cont');
 
       $async.$set('lazy', lazy($proc, 'nextTick.enqueue'));
@@ -125,8 +124,240 @@ var async = utils.arrApply((function MakeAsync() {
           return !arr.length;
         };
       })
+    ),
+    (function() {
+      return utils.parseFuncs([].slice.call(arguments), { pure: utils.pure });
+    })(
+    // ===== AsyncFN ===== //
+      (function pure(t) {
+        return function $_pure(f) {
+          return f(t);
+        }
+      }),
+      (function cast(t) {
+        return t && t instanceof Function && t.name.substr(-4) == 'pure' ? t : function $_pure(f) {
+          return f(t);
+        }
+      }),
+      (function inject(f) {
+        return function $_pure(succ, fail) {
+          succ(f());
+        };
+      }),
+      (function eject(x, f) {
+        return function $_pure(succ, fail) {
+          x(function(result) {
+            succ(f(result));
+          }, fail);
+        };
+      }),
+      (function count(cnt, block) {
+        return function $_pure(succ, fail) {
+          var i = 0;
+          (function f(v) {
+            i++ < cnt ? block(i)(f, fail) : succ(v);
+          })(undefined);
+        };
+      }),
+      (function $_times($_count) {
+        return function times(cnt, block) {
+          return $_count(cnt, function() {
+            return block;
+          });
+        };
+      }),
+      (function delay(x, ms) {
+        return function $_pure(k) {
+          x(function(v) {
+            ms ? self.setTimeout(function() {
+              k(v);
+            }, ms) : k(v);
+          });
+        };
+      }),
+    // ===== AsyncAP ===== //
+      (function ap(f, x) {
+        return function $_pure(succ, fail) {
+          var _f;
+          var _x;
+          var count = 0;
+          function fin() {
+            if (++count === 2)
+              succ(_f(_x));
+          }
+          f(function (g) {
+            _f = g;
+            fin();
+          }, fail);
+          x(function $_pure(r) {
+            _x = r;
+            fin();
+          }, fail);
+        };
+      }),
+      (function get(f) {
+        return function(r) {
+          return f(r && r instanceof Array && r.length == 1 ? r.first() : r);
+        }
+      }),
+    // ===== AsyncFMAP ===== //
+      (function $_fmap($_ap, $_pure) {
+        return function fmap(xs, f) {
+          return $_ap($_pure(f), xs);
+        };
+      }),
+    // === FlatMap Bind Array == //
+      (function flatmap() {
+        return utils.arrApply([].slice.call(arguments));
+      })(
+        (function make($_flat) {
+          return function flatmap(k, f) {
+            return $_flat(k, f || utils.unit);
+          };
+        }),
+        (function() {
+          function flat(x, f) {
+            return Array.prototype.concat.apply([], x.map(f));
+          };
+          function bind(f) {
+            function bound(x) {
+              return x instanceof Array ? flat(x, bound) : f(x);
+            };
+            return bound;
+          };
+          return function(k, f) {
+            return function(v) {
+              return k(flat(v instanceof Array ? v : [ v ], bind(f)));
+            }
+          };
+        })()
+      ),
+      (function $combine(make) {
+        function combine(x, f, a) {
+          return x.bind(make(function(v, t, i, j) {
+            return f(v, t, i, j);
+          }, a, x.length));
+        };
+        combine['$$_scope'] = { make: make };
+        return combine;
+      })(
+        (function makeCombi(f, a, l) {
+          var i = -1;
+          var j = 0;
+          function $$map(t, v) {
+            if (i == l) i = 0;
+            return t.map(function(x) {
+              return x instanceof Array ? $$map(x, v + 1) : f(v, x, !j ? ++i : i, j++);
+            });
+          };
+          function $map(t) {
+            return function(v) {
+              return $$map(t, v);
+            }
+          };
+          return $map(a);
+        })
+      ),
+      (function select() {
+        return utils.arrApply([].slice.call(arguments));
+      })(
+        (function make($_const, $_filtered, $_select) {
+          function select(f, m) {
+            return this.chain($_select($_filtered(f || $_const, m || unit)));
+          };
+          select['$$_scope'] = { '$_filtered': $_filtered, '$_select': $_select };
+          return select;
+        }),
+        (function konst() {
+          return true;
+        }),
+        (function(f, m) {
+          function $map(v) {
+            return Array.prototype.concat.apply([], (v instanceof Array ? v : [ v ]).map(function(x) {
+              return (x instanceof Array ? $map(x) : [ x ]).filter(f);
+            }));
+          };
+          function $wrap(x) {
+            var o = x.aid();
+            o.arr = false;
+            return x.collect(o, function(x) {
+              return x.map(function(v) {
+                return v instanceof Array ? $wrap(v.map(m)) : v;
+              }).collect(o, $map);
+            });
+          };
+          function $run(x) {
+            return $wrap(x.map(m));
+          };
+          return $run;
+        }),
+        (function(f) {
+          return function $_select(x) {
+            if (x instanceof Array) {
+              return x.map($_select).chain(f);
+            }else {
+              return x;
+            }
+          };
+        })
+      ),
+      (function array(xs) {
+        return function $_pure(succ, fail) {
+          var values = new Array(xs.length);
+          var count  = 0;
+          xs.forEach(function(x, i) {
+            x(function(result) {
+              values[i] = result;
+              count++;
+              if (count == xs.length) {
+                succ(values);
+              }
+            }, fail);
+          });
+        };
+      }),
+      (function $_collect($_array) {
+        return function collect() {
+          return $_array([].slice.call(arguments));
+        }
+      }),
+      (function $_parallel($_array) {
+        return function parallel() {
+          var args = [].slice.call(arguments);
+          return function $_pure(succ, fail) {
+            $_array(args)(function(_args) {
+              return succ(_args);
+            }, fail);
+          };
+        }
+      }),
+      (function(run, series) {
+        return function $_series() {
+          return series(utils.y(run));
+        }
+      })(
+        (function(loop) {
+          return function run(xs) {
+            xs[0][0].length == 0 ? xs.pop().splice(0, 2).shift()(xs.shift().pop()) : xs[0][0][0](function (r) {
+              xs[0][1][xs[0][1].length] = r;
+              xs[0][0].shift();
+              return loop(xs);
+            }, xs[1][1]);
+          }
+        }),
+        (function(seriesY) {
+          return function series() {
+            return (function(xs) {
+              return function $_pure(succ, fail) {
+                return seriesY([ [ xs.slice(0), new Array(xs.length) ], [ succ, fail ] ]);
+              };
+            })([].slice.call(arguments));
+          }
+        })
+      )
     )
-));
+  )
+);
 
 module.exports = async;
 

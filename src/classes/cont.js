@@ -4,6 +4,7 @@ module.exports = (function Cont() {
   return {
     parent: 'Functor',
     klass: function Cont(x, f) {
+      this.id = this.ctor.$id = this.id();
       this._x = this.cast(x);
       this._f = f || this.mf;
     },
@@ -25,9 +26,6 @@ module.exports = (function Cont() {
           && v.name.substr(-4) == 'pure'
             && (!f.name || f.name.substr(-4) != 'pure' || f.name != 'mf') ? v(f) : f(v);
         }
-      },
-      $cont() {
-        return this.$fn.cont(this._x, this._f);
       },
       map(f) {
         return this.of(this._x, this.$fn.cast(this.$pure(this.$map(f))));
@@ -52,11 +50,16 @@ module.exports = (function Cont() {
         return value && value instanceof ctor ? true : false;
       }
     },
+    cont() {
+      return function $_cont() {
+        return this.$fn.cont(this._x, this._f);
+      }
+    },
     cast(v, p) {
       if (v && this.is(v) && v.cont) {
         return v.$cont ? v.$cont() : v.cont();
       }else if (v && v instanceof Array && v.cont) {
-        return v.cont().cont();
+        return v.cont().$cont();
       }else {
         return v && v instanceof Function
           && (p || v.name.substr(-4) == 'cont'
@@ -66,6 +69,7 @@ module.exports = (function Cont() {
     },
     init: function(type, klass, sys) {
       klass.prop('is', type.is(klass.$ctor));
+      klass.prop('$cont', type.cont());
       klass.prop('cast', type.cast.bind(klass.proto()));
       klass.prop('$fn', {
         cast: sys.utils.andThen(klass.prop('cast')),

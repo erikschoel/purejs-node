@@ -31,6 +31,9 @@ var ns = utils.inherit(function NS(values) {
 }, utils.constructor, {
   $pure: utils.$const(pure),
   $classes: {},
+  $keys() {
+    return Object.keys(this).filter(k => k.indexOf('$') !== 0);
+  },
   is(value) {
     return value instanceof this.$root.constructor;
   },
@@ -40,8 +43,12 @@ var ns = utils.inherit(function NS(values) {
   inherit(name, ext) {
     return this.$classes['NS' + name] || (this.$classes['NS' + name] = utils.inherit(utils.ctor('NS' + name), this.constructor, ext, true));
   },
+  normalize(value) {
+    return typeof value === 'object' ? new this.$root.constructor(value) : value;
+  },
   add(name, values) {
-    return (this.data()[name] = this.klass(name).of(values));
+    var add = this.klass(name).of(values);
+    return (this.data()[(add.$name = name)] = add);
   },
   parseItem(item) {
     if (item) {
@@ -69,10 +76,10 @@ var ns = utils.inherit(function NS(values) {
     // eslint-disable-next-line
     return this.parse(this.parseItem(this.get(name).replace(/\t/g, '  ')));
   },
-  compile() {
-    return this.of(Object.keys(this).reduce((acc, key) => {
+  compile(cache) {
+    var compiled = this.of(this.$keys().reduce((acc, key) => {
       var item = this.get(key);
-      var func = this.is(item) ? item.compile() : (typeof item === 'string' ? this.compileOne(key) : item);
+      var func = this.is(item) ? item.compile(cache === true ? key : undefined) : (typeof item === 'string' ? this.compileOne(key) : item);
       if (func instanceof Function) {
         acc[func.name] = func;
       } else {
@@ -80,6 +87,15 @@ var ns = utils.inherit(function NS(values) {
       }
       return acc;
     }, {}));
+    return cache && typeof cache === 'string' ? (this.data()[cache] = compiled) : compiled;
+  },
+  compileAll(values) {
+    this.$keys().map((key) => {
+      if (values[key]) {
+        this.data()[key] = this.get(key).of(values[key]).compile(key);
+      }
+    });
+    return this;
   },
   obtain(f, c) {
     if (c === true) {
@@ -111,6 +127,17 @@ var ns = utils.inherit(function NS(values) {
     if (this[name] instanceof Function && this[name].length === 0) {
       return this[name]();
     }
+  },
+  runAll() {
+    this.$keys().map((key) => {
+      const item = this.get(key);
+      if (item instanceof this.constructor) {
+        item.runAll();
+      } else {
+        this.runItem(key);
+      }
+    });
+    return this;
   }
 }, {
   inherit(name, ext) {
@@ -118,7 +145,7 @@ var ns = utils.inherit(function NS(values) {
   },
   create(ns) {
     return function(name, values) {
-      return !name ? ns : (ns[name] ? ns[name].assign(values) : (values instanceof Array ? values : ns.add(name, values || {})));
+      return !name ? ns : (ns[name] ? (values ? ns[name].assign(values) : ns[name]) : (values instanceof Array ? values : ns.add(name, values || {})));
     }
   },
   init(namespaces) {
@@ -139,8 +166,9 @@ ns.inherit('extended', {
   runItem(name) {
     var item = this.get(name);
     var ctor = this.parseItem(item.ctor);
+    var body = item.proto.split('\n').map((line, index, all) => line === '}' && index < (all.length - 1) ? '},' : line).map(line => '\t\t' + line);
     // eslint-disable-next-line
-    var proto = (new Function([ '\treturn {' ].concat(item.proto.split('\n').map((line, index, all) => line === '}' && index < (all.length - 1) ? '},' : line).map(line => '\t\t' + line).concat([ '\t}' ])).join('\n')))();
+    var proto = (new Function([ '\treturn {' ].concat(body).concat([ '\t}' ]).join('\n')))();
     // var klass = this.$pure().inherit(ctor, this.$pure().klass(item.base), proto, true);
     var klass = this.$pure().klass(item.base).parse({ parent: item.base, klass: ctor, ext: proto });
     console.log(klass);
@@ -148,7 +176,20 @@ ns.inherit('extended', {
   }
 });
 
-pure['namespace'] = ns.init([ 'classes', 'utils', 'tests', 'custom', 'extended', 'instances' ]);
+ns.inherit('instances', {
+  parse(item) {
+    return item();
+  },
+  runItem(name) {
+    var item = this.get(name);
+    var func = this.parseItem('function() { return ' + item.inst + '}');
+    var inst = func.call(this.$pure().klass(item.base));
+    console.log(inst);
+    return inst;
+  }
+});
+
+pure['namespace'] = ns.init([ 'classes', 'utils', 'custom', 'extended', 'instances', 'tests' ]);
 
 module.exports = pure;
 

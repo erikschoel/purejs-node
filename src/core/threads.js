@@ -9,19 +9,7 @@ var threads = utils.arrApply((function MakeThreads() {
 })(
   // === IMPORT / PARSE === //
     (function $$THREADS() {
-      var funcs = [].slice.call(arguments);
-      return funcs.reduce((acc, fn) => {
-        if (fn.name.indexOf('$_') === 0) {          
-          var args = utils.getArgs(fn);
-          var func = fn.apply(null, args.map((arg) => {
-            return acc[arg.replace('$_', '')];
-          }));
-          acc[func.name] = func;
-        }else {
-          acc[fn.name] = fn;
-        }
-        return acc;
-      }, utils.obj());
+      return utils.parseFuncs([].slice.call(arguments), utils.obj());
     }),
   // === VALUES === //
     (function lazyValue(v) { return (function() { return v; }); }),
