@@ -60,9 +60,9 @@ module.exports = (function() {
             }
           }),
           (function _$_run($run, $extend, $proc) {
-            return function run(x) {
+            return function run(x, o) {
               return function $_pure(k, p, f) {
-                return $run(x, k, p ? (p.done ? p : $proc.clone(p)) : $proc, f);
+                return $run(x, k, p || (p = o) ? (p.done ? p : $proc.clone(p)) : $proc, f);
               }
             };
           }),
@@ -79,9 +79,11 @@ module.exports = (function() {
           (function get(run, proc) {
             return function collect(x, s) {
               if (proc.pure && x && x.name == '$_pure' && x instanceof Function) {
-                return x(function(r) { collect(r, s); });
+                return x(function(r) {
+                  collect(r, s);
+                });
               }else if (proc.arr && x instanceof Array) {
-                return x.length ? (x.length == 1
+                return x.length ? (x.length === 1
                   ? collect(x.shift(), s)
                     : run(x, s, proc))
                   : s(x);
@@ -111,9 +113,9 @@ module.exports = (function() {
             }
           })
         ),
-        (function each(wrap, map, bind) {
+        (function each(wrap, map, bind, chain) {
           return function each(x, f) {
-            return x.chain(bind(map(wrap(f))));
+            return chain(x, bind(map(wrap(f))));
           };
         })(
           (function wrap(f) {
@@ -136,6 +138,11 @@ module.exports = (function() {
                 return x;
               }
             };
+          }),
+          (function(x, f) {
+            return [ x.fmap(function(r) {
+              return f(r);
+            }) ];
           })
         ),
         // === Monadic Bind Array == //
