@@ -221,7 +221,7 @@ var async = utils.arrApply((function MakeAsync() {
           };
           function bind(f) {
             function bound(x) {
-              return x instanceof Array ? flat(x, bound) : f(x);
+              return x instanceof Array ? flat(x, bound) : (typeof x === 'object' && x.$$bind && x.constructor.name === 'Object' ? flat(Object.values(x), bound) : f(x));
             };
             return bound;
           };
@@ -232,30 +232,38 @@ var async = utils.arrApply((function MakeAsync() {
           };
         })()
       ),
-      (function $combine(make) {
-        function combine(x, f, a) {
-          return x.bind(make(function(v, t, i, j) {
-            return f(v, t, i, j);
-          }, a, x.length));
-        };
+      (function $combine(create, init, load, make) {
+        var combine = create(load, init, make);
         combine['$$_scope'] = { make: make };
         return combine;
       })(
-        (function makeCombi(f, a, l) {
-          var i = -1;
-          var j = 0;
-          function $$map(t, v) {
-            if (i == l) i = 0;
-            return t.map(function(x) {
-              return x instanceof Array ? $$map(x, v + 1) : f(v, x, !j ? ++i : i, j++);
-            });
+        (function create(load, init, make) {
+          return function combine(x, f) {
+            x.load = load(init(f), make);
+            return x;
+          }
+        }),
+        (function init(f) {
+          return function $load(c, j, l) {
+            return function $$map(t, v, d, p, o) {
+              if (c === l) c = 0;
+              return t.map(function(x, y) {
+                return x instanceof Array ? $load(0, j, x.length - 1)(x, v, d + 1, { pos: p.pos.concat(y), rel: 0 }) : f(v, x, d + (!j ? ++c : c), { pos: p.pos, rel: y }, j++);
+              });
+            };
+          }
+        }),
+        (function load(func, make) {
+          return function(arr) {
+            return this.bind(make(func(-1, 0, Math.max(this.length - 1, 0)))(arr));
           };
-          function $map(t) {
-            return function(v) {
-              return $$map(t, v);
+        }),
+        (function make(map) {
+          return function $map(t) {
+            return function(v, i, o) {
+              return map(t, v, 0, { pos: [ i ], rel: 0 }, o);
             }
           };
-          return $map(a);
         })
       ),
       (function select() {
@@ -263,7 +271,7 @@ var async = utils.arrApply((function MakeAsync() {
       })(
         (function make($_const, $_filtered, $_select) {
           function select(f, m) {
-            return this.chain($_select($_filtered(f || $_const, m || unit)));
+            return this.chain($_select($_filtered(f || $_const, m || utils.unit)));
           };
           select['$$_scope'] = { '$_filtered': $_filtered, '$_select': $_select };
           return select;
@@ -272,33 +280,33 @@ var async = utils.arrApply((function MakeAsync() {
           return true;
         }),
         (function(f, m) {
-          function $map(v) {
-            return Array.prototype.concat.apply([], (v instanceof Array ? v : [ v ]).map(function(x) {
-              return (x instanceof Array ? $map(x) : [ x ]).filter(f);
-            }));
-          };
-          function $wrap(x) {
-            var o = x.aid();
-            o.arr = false;
-            return x.collect(o, function(x) {
-              return x.map(function(v) {
-                return v instanceof Array ? $wrap(v.map(m)) : v;
-              }).collect(o, $map);
-            });
-          };
-          function $run(x) {
-            return $wrap(x.map(m));
-          };
-          return $run;
+            function $map(x) {
+                return (x instanceof Array ? x : [ x ]).map(function(v) {
+                    return (v instanceof Array ? v : (typeof v === 'object' && v.$$obj ? Object.values(v) : m(v)));
+                });
+            };
+            function $filter(x) {
+                return (x instanceof Array ? x : [ x ]).map(function(v) {
+                    return v instanceof Array ? v : (typeof v === 'object' && v.$$obj ? Object.values(v) : v);
+                }).filter(function(v, i) {
+                    return v instanceof Array || f(v, i);
+                });
+            };
+            return function $run(x) {
+                var o = x.aid();
+                return x.chain($filter).collect(o, function(r) {
+                    return r.map($map);
+                });
+            };
         }),
         (function(f) {
-          return function $_select(x) {
-            if (x instanceof Array) {
-              return x.map($_select).chain(f);
-            }else {
-              return x;
-            }
-          };
+            return function $_select(x) {
+                if (x instanceof Array) {
+                    return x.map($_select).chain(f);
+                }else {
+                    return x;//typeof x === 'object' ? $_select(Object.values(x)) : x;
+                }
+            };
         })
       ),
       (function array(xs) {

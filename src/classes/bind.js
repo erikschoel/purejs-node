@@ -10,7 +10,7 @@ module.exports = (function() {
     },
     ext: [
       (function() {
-        var proc = this.$pure.utils.obj({ pure: true, arr: true, val: true, cont: false, other: true, done: true });
+        var proc = this.$pure.utils.obj({ pure: true, arr: true, val: true, obj: false, cont: false, other: true, done: true });
         var args = [].slice.call(arguments);
 
         args.unshift(args.shift().concat([ Object.assign, proc, this.$pure.utils.unit ]).apply());
@@ -85,6 +85,8 @@ module.exports = (function() {
                   ? collect(x.shift(), s)
                     : run(x, s, proc))
                   : s(x);
+              }else if (proc.obj && typeof x === 'object' && x.constructor.name === 'Object') {
+                return Object.values(x).map(function(r) { collect(r, s); });
               }else if (proc.val) {
                 return s(x);
               }
@@ -109,14 +111,21 @@ module.exports = (function() {
             }
           })
         ),
-        (function each(map, bind) {
+        (function each(wrap, map, bind) {
           return function each(x, f) {
-            return x.chain(bind(map(f)));
+            return x.chain(bind(map(wrap(f))));
           };
         })(
+          (function wrap(f) {
+            return function(i) {
+              return function(v) {
+                return f(v, i);
+              }
+            }
+          }),
           (function(f) {
-            return function(x) {
-              return x instanceof Array ? x.flatten().chain(f) : x;
+            return function(x, i) {
+              return x instanceof Array ? x.flatten().chain(f(i)) : x;
             }
           }),
           (function(f) {
@@ -200,6 +209,8 @@ module.exports = (function() {
                 }else if (p.arr && x instanceof Array) {
                   return x.length == 1 ? closed(x.shift(), i, o)(k)
                   : (!x.length ? k(x) : x.map(closed).make(k, p));//x.bind(m(x), p).run(k));
+                }else if (p.obj && typeof x === 'object' && x.constructor.name === 'Object') {
+                  return Object.values(x).map(closed).make(k, p);
                 }else if (p.cont && x && x.$cont instanceof Function && x.$cont.name == '$_cont') {
                   return closed(x.$cont(), i, o)(k);
                 }else if (p.val) {
@@ -475,6 +486,7 @@ module.exports = (function() {
         Array.prototype.aid = function(aid) {
           return aid && (this._aid = aid) ? this : (this._aid || (this._aid = { aid: this.arrid() }));
         };
+        Array.prototype.take    = function(f) { return f(this); };
         Array.prototype.each    = this.utils.call1(this.klass.prop('each'));
         Array.prototype.bind    = this.klass.prop('bind');
         Array.prototype.next    = this.utils.call2(this.async.next);
