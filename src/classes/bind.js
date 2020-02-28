@@ -113,35 +113,24 @@ module.exports = (function() {
             }
           })
         ),
-        (function each(wrap, map, bind, chain) {
+        (function each(wrap, cast, chain) {
           return function each(x, f) {
-            return chain(x, bind(map(wrap(f))));
+            return chain(x, wrap(cast, f));
           };
         })(
-          (function wrap(f) {
-            return function(i) {
-              return function(v) {
-                return f(v, i);
-              }
+          (function wrap(c, f) {
+            return function(v, i) {
+              return c(f(v, i));
             }
           }),
-          (function(f) {
-            return function(x, i) {
-              return x instanceof Array ? x.flatten().chain(f(i)) : x;
-            }
+          (function cast(v) {
+            return v instanceof Array ? v.collect() : v;
           }),
-          (function(f) {
-            return function each(x) {
-              if (x instanceof Array) {
-                return x.map(f);
-              }else {
-                return x;
-              }
-            };
-          }),
-          (function(x, f) {
+          (function chain(x, f) {
             return [ x.fmap(function(r) {
-              return f(r);
+              return r.map(function(v) {
+                return v instanceof Array && v.ofArraysOnly() ? Array.prototype.concat.apply([], v) : v;
+              }).map(f);
             }) ];
           })
         ),
@@ -252,7 +241,7 @@ module.exports = (function() {
           (function run(f, g, c) {
             return function(v, r) {
               r || (r = {});
-              return g.run(v).bind(f(r, v, 0)).chain(c(r));
+              return g.run(v).bind(f(r, v, 0)).chain(c(r), 'run');
             }
           })
         ),
@@ -537,9 +526,11 @@ module.exports = (function() {
         Array.prototype.flatten = function() {
           return this.flatmap(this.unit);
         };
-        Array.prototype.chain = function(f) {
+        Array.prototype.chain = function(f, s) {
+          console.log([ 'chainArgs', s || 'user' ]);
           return [ this.fmap(function(r) {
-            return f(r && r.length == 1 ? r.first() : r);
+            console.log([ 'chainArgs: result', s || 'user', r ]);
+            return f(r && r.length == 1 && r[0] instanceof Array ? r.first() : r);
           }) ];
         };
         // Array.prototype.list = this.utils.call(this.list.fromConstructor('list'));
@@ -564,7 +555,7 @@ module.exports = (function() {
           return ext.async.then(this.collect(p), ext.cont(f));
         };
         Array.prototype.flatmap = function(f) {
-          return this.bind(f).chain(ext.async.flatmap(this.unit));
+          return this.bind(f).chain(ext.async.flatmap(this.unit), 'flatmap');
         };
         Array.prototype.cont = function() {
           return this.length == 1 && this[0] instanceof Function && this[0].name == '$_pure'

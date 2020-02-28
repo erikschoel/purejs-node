@@ -159,6 +159,11 @@ module.exports = (function() {
             return self.indexOf(value) === index;
           });
         };
+        this.prototype.ofArraysOnly = function() {
+          return this.reduce(function(acc, val, idx) {
+            return acc && val instanceof Array;
+          }, true);
+        };
         this.prototype.obj = function() {
           var values = [].slice.call(arguments).flat();
           return this.reduce(function(r, v, i) {

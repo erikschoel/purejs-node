@@ -52,15 +52,15 @@ function createElementFromHTML(htmlString, tagName) {
 function makeElementInfo(leafElementName, wrapperElementName, containerElementName, attributeMap) {
   return function(dataArray) {
     return dataArray.load(makeElementTags(leafElementName)).each(function(markupData, dataIndex) {
-      return markupData.filter((v, i) => i%2===0);
-    }).each(function(markupData, dataIndex) {
-      return markupData.reduce(function(acc, item) {
-        var elm = acc.appendChild(createElementFromHTML(item.open + item.value + item.close, acc.localName));
+      return markupData.filter((v, i) => i%2===0).reduce(function(acc, item) {
+        var elm = acc.appendChild(createElementFromHTML(item.open.replace('>', ' data-key="' + item.key + '">') + item.value + item.close, acc.localName));
         if (attributeMap[item.key]) {
           acc.setAttribute(attributeMap[item.key], item.value);
         }
         return acc;
       }, document.createElement(wrapperElementName));
+    }).chain(function(items) {
+      return items instanceof Array ? items : [ items ];
     }).chain(function(items) {
       var container = document.createElement(containerElementName);
       items.forEach(item => container.appendChild(item));
@@ -98,28 +98,30 @@ function renderFromElements(dataArrayFunc, elementFunc) {
   return function(dataArrayOfObjects, targetElement) {
     return dataArrayFunc(dataArrayOfObjects).combine(function(x, y, a, b, c) {
       return Object.assign(x, c%2===0 ? { open: y } : { close: y });
-    }).take(elementFunc).chain(function(container) {
-      var child, counterTarget = 0, containerCounter = 0, current, containerTarget = targetElement.querySelector(container.localName);
-      if (containerTarget) {
-        while (container.firstChild && (child = container.children[containerCounter++])) {
-          if ((current = containerTarget.children[counterTarget++]) && current.getAttribute('data-id') === child.getAttribute('data-id')) {
-            if (current.innerHTML !== child.innerHTML) {
-              current.innerHTML = child.innerHTML;
+    }).take(elementFunc).chain(function(result) {
+      return result.map((container) => {
+        var child, counterTarget = 0, containerCounter = 0, current, containerTarget = targetElement.querySelector(container.localName);
+        if (containerTarget) {
+          while (container.firstChild && (child = container.children[containerCounter++])) {
+            if ((current = containerTarget.children[counterTarget++]) && current.getAttribute('data-id') === child.getAttribute('data-id')) {
+              if (current.innerHTML !== child.innerHTML) {
+                current.innerHTML = child.innerHTML;
+              }
+            }else if (containerTarget) {
+              targetElement.replaceChild(container, containerTarget);
+              break;
+            }else {
+              targetElement.appendChild(container);
+              break;
             }
-          }else if (containerTarget) {
-            targetElement.replaceChild(container, containerTarget);
-            break;
-          }else {
-            targetElement.appendChild(container);
-            break;
           }
+          var containerLength = container.children.length;
+          while (containerTarget.children.length > containerLength) containerTarget.removeChild(containerTarget.children[containerLength]);
+        }else {
+          targetElement.appendChild(container);
         }
-        var containerLength = container.children.length;
-        while (containerTarget.children.length > containerLength) containerTarget.removeChild(containerTarget.children[containerLength]);
-      }else {
-        targetElement.appendChild(container);
-      }
-      return targetElement;
+        return targetElement;
+      });
     });
   }
 };
