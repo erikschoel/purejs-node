@@ -35,6 +35,15 @@ var CTOR = (function() {
         this.prop('id', this.makeID(this.prop('prefix', ctor.name.replace('$', '').substr(0, 2).toUpperCase())));
         this.init(ctor, attrs, parent);
       },
+      type: function(type) {
+        return function(x) {
+          if (x instanceof type) {
+            return this.of(x);
+          } else {
+            throw new Error('Type cast failure: x is not of type ' + (type.prototype && type.prototype.constructor === type ? type.name : (type.constructor ? type.constructor.name : type)));
+          }
+        }
+      },
       init: function(ctor, attrs, parent) {
         if (this instanceof ctor) {
           ctor.prototype._level = 0;
@@ -55,10 +64,17 @@ var CTOR = (function() {
         if (!ctor.of) ctor.of = parent ? parent.$ctor.of : this.of;
         this.of = this.$ctor.$of = ctor.of.bind(ctor);
         if (ctor.pure) this.pure = ctor.$pure = ctor.pure.bind(ctor);
-        else this.pure = ctor.$pure = this.of;
+        else this.pure = ctor.$pure = parent && parent.$ctor.pure ? parent.$ctor.pure.bind(ctor) : this.of;
         if (ctor.lift) this.lift = ctor.$lift = ctor.lift.bind(ctor);
         if (!ctor.prototype.to) ctor.prototype.to = this.to;
         if (!ctor.prototype.is) ctor.prototype.is = this.is;
+
+        if (parent && parent.$ctor) {
+          this.mixin(Object.keys(parent.$ctor).filter(k => k.substr(0, 1) !== '$' && !ctor[k]).reduce((acc, key) => {
+            acc[key] = parent.$ctor[key];
+            return acc;
+          }, {}), ctor);
+        }
       },
       parent: function(name) {
         var type = name ? this.find(name) : this;
@@ -131,6 +147,7 @@ var CTOR = (function() {
         klass  = this.child(child, proto, attrs);
         if (!klass.$ctor.prototype.__) klass.$ctor.prototype.__ = klass.$ctor;
         if (!klass.$ctor.prototype.kid) klass.$ctor.prototype.kid = this.kid;
+        if (!klass.$ctor.prototype.bin) klass.$ctor.prototype.bin = this.bin;
         return new klass(klass.$ctor, attrs, this);
       },
       parse: function(def) {
@@ -252,6 +269,7 @@ var CTOR = (function() {
         else if (args.length) return this.find(args.shift()).item(args.join('.'));
       },
       type: function(name, fn) {
+        debugger;
         var type = this.get(name);
         return type ? (fn ? type[fn] : type) : unit;
       },
@@ -267,8 +285,8 @@ var CTOR = (function() {
           return f(x, c);
         })));
       },
-      to: function(type, fn) {
-        return this.map(this.ctor.find(type).pure);
+      to: function(type) {
+        return this.map(this.ctor.find(type).of);
       },
       walk: function(f) {
         var ctor = this;
@@ -393,6 +411,9 @@ var CTOR = (function() {
     this.prototype = {
       klass: function(name) {
         return this.ctor.find(name);
+      },
+      baseProp: function(name, value) {
+        return this.constructor.prototype[name] = value;
       }
     };
     return this;

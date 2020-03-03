@@ -395,15 +395,27 @@ var Store = (function() {
         return asArray === true ? path : path.join(typeof asArray == 'string' ? asArray : '.');
       };
     },
+    cache: function(cache) {
+      function node(code) {
+        return cache.get(code) || cache.node(code);
+      }
+      function get(node, args) {
+        return args.length ? node.get.apply(node, args) : node.get();
+      }
+      return function() {
+        return get(node(this.$code || this.ctor.$code), [].slice.call(arguments));
+      }
+    },
     init: function(type, klass, sys) {
       klass.$ctor.prototype.isStore = true;
       klass.$ctor.prototype.$data = this.$data(klass);//type.make(klass));
       klass.$ctor.prototype.unit = sys.utils.unit;
       klass.$ctor.prototype._identifier = type.identifier('_parent');
-      sys.root  = klass.$ctor.prototype.root = sys.unit(new klass.$ctor());
       sys.klass = type.find;
+      var root  = sys.root  = klass.$ctor.prototype.root = sys.unit(new klass.$ctor());
       var store = this.constructor.prototype.$store = sys.root.child('types');
       var index = this.constructor.prototype.$index = store.child('index');
+      klass.base.prototype.cache = type.cache(root.node('cache'));
     }
   };
 });

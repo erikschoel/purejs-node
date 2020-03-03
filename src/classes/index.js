@@ -1,6 +1,8 @@
 'use strict';
 
 var $Functor = require('./functor');
+var $Compose = require('./compose');
+var $Maybe = require('./maybe');
 var $Array = require('./array');
 var $Bind = require('./bind');
 var $Ap = require('./ap');
@@ -11,7 +13,7 @@ var $List = require('./list');
 var $IO = require('./io');
 
 var classes = {
-  $Functor, $Array, $Bind, $Ap, $Cont, $Coyoneda, $Free, $List, $IO
+  $Functor, $Compose, $Maybe, $Array, $Bind, $Ap, $Cont, $Coyoneda, $Free, $List, $IO
 }
 
 module.exports = classes;

@@ -21,13 +21,10 @@ module.exports = (function Coyoneda() {
     attrs: [
       function of(x) {
         return new this(this.ctor.parent().of(x), this.prototype.$fn.unit);
+      },
+      function lift(x) {
+        return new this(this.ctor.parent().of(x), this.prototype.$fn.unit);
       }
-    ],
-    init: function(type, klass, sys) {
-      klass.prop('$fn', {
-        unit: sys.utils.unit,
-        compose: sys.utils.compose
-      });
-    }
+    ]
   };
 });

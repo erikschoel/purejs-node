@@ -9,6 +9,7 @@ var clone = require('./clone');
 var inherit = require('./inherit');
 var keys = require('./keys');
 var mixin = require('./mixin');
+var property = require('./property');
 var unit = require('./unit');
 var curry = require('./curry');
 var pure = require('./pure');
@@ -105,7 +106,7 @@ var Empty = inherit(function Empty(v) {
 }, true);
 
 var utils = Obj.of(Object.assign({
-  obj: Obj.of, empty: Empty.of, andThen, arrApply, arrBind, compose, counter, inherit, keys, values, mixin, unit, curry,
+  obj: Obj.of, empty: Empty.of, andThen, arrApply, arrBind, compose, counter, inherit, keys, values, mixin, property, unit, curry,
   pure, fold, getArgs, extract, $const, cont, ctor, right, left, toString, tap, wrap, walk, y,
   log: tap(console.log.bind(console)),
   parseFuncs(funcs) {
@@ -157,9 +158,23 @@ var utils = Obj.of(Object.assign({
       return function() {
         return f.apply(this, arguments);
       }
+    }),
+    (function bind(a) {
+      return function(f) {
+        return function(b) {
+          return f(a, b);
+        }
+      }
+    }),
+    (function flip(f) {
+      return function(a, b) {
+        return f(b, a);
+      }
     })
   )
 ));
+
+utils.bin = utils.pass(utils.bind);
 
 module.exports = utils;
 module.exports.default = utils;

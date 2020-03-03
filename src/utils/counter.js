@@ -6,6 +6,8 @@ function make(counter) {
     if (id >= counter.count) {
       counter.count = id + 1;
       return counter.prefix + id;
+    } else if (id) {
+      return counter.prefix + id;
     } else {
       return counter.prefix + counter.count++;
     }

@@ -43,6 +43,9 @@ Array.prototype.sort = (function(sort, create, compare) {
     }
   })
 );
+Function.prototype.ap = function(fn, ctx) {
+  return fn.call(ctx, this);
+};
 String.prototype.toDash = function() {
   return this.length < 2 ? this.toLowerCase() : this.replace(/\s+/g, '').replace(/([A-Z][^A-Z])/g, function($1, p1, pos){return (pos > 0 ? "-" : "") + $1.toLowerCase();});
 };
@@ -52,20 +55,27 @@ String.prototype.toTypeCode = function() {
 String.prototype.toTypeName = function() {
   return this.replace(/-/g, '').replace('$', '').substr(0, 1).toUpperCase() + this.slice(1);
 };
+String.prototype.ucfirst = function() {
+  return this ? (this.substr(0, 1).toUpperCase() + this.substr(1).toLowerCase()) : this;
+};
 
 var pure     = require('./pure');
 var base     = pure.utils.arrApply(require('./ctor'), pure);
 var ctor     = new base(base);
+
+ctor.prop('bin', pure.utils.pass(pure.utils.bind));
 var db       = ctor.parse(require('./db'));
 var store    = ctor.parse(require('./store'));
 var functor  = ctor.parse(pure.classes.$Functor);
-var array    = ctor.parse(pure.classes.$Array);
 var ap       = functor.parse(pure.classes.$Ap);
-var list     = ap.parse(pure.classes.$List);
 var cont     = functor.parse(pure.classes.$Cont);
+var compose  = functor.parse(pure.classes.$Compose);
+var array    = ctor.parse(pure.classes.$Array);
+var io       = functor.parse(pure.classes.$IO);
+var maybe    = ap.parse(pure.classes.$Maybe);
+var list     = ap.parse(pure.classes.$List);
 var coyoneda = functor.parse(pure.classes.$Coyoneda);
 var free     = functor.parse(pure.classes.$Free);
-var io       = functor.parse(pure.classes.$IO);
 
 db.add();
 store.add();
